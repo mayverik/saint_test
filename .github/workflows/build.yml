@@ -33,7 +33,7 @@ jobs:
                     
     build-linux:
         name: Build for Linux
-        runs-on: ubuntu-18.04
+        runs-on: ubuntu-20.04
         steps:
           - uses: actions/checkout@v4
             with:
@@ -58,7 +58,7 @@ jobs:
 
     build-mac:
         name: Build for Apple
-        runs-on: macos-11
+        runs-on: macos-13
         strategy:
           fail-fast: false
           matrix:

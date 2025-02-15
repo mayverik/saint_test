@@ -51,6 +51,7 @@ jobs:
                 path: |
                     build/Release/sdl-min
                     build/Release/*.so
+                    build/Release/*.so.*
                     build/Release/*.ttf
                     build/Release/*.ogg
                     build/Release/*.svg

@@ -112,7 +112,7 @@ target_link_libraries(${EXECUTABLE_NAME} PUBLIC
 
 # Set specific opengl version for emscripten
 if(EMSCRIPTEN)
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_WEBGL2=1")
+    target_link_libraries(${EXECUTABLE_NAME} "-s USE_WEBGL2=1")
 endif()
 
 # SDL_Image bug: https://github.com/libsdl-org/SDL_image/issues/506

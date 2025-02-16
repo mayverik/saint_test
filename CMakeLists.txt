@@ -110,7 +110,7 @@ set(LIBS
 
 # Set specific opengl version for emscripten
 if(EMSCRIPTEN)
-    set(LIBS ${LIBS} "-s USE_WEBGL=2")
+    set(LIBS ${LIBS} "-s USE_WEBGL2=1")
 elseif(UNIX AND NOT APPLE)
     set(LIBS ${LIBS} dl)
 endif()

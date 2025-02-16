@@ -19,8 +19,6 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 # Declare the project
 project(sdl-min)
 
-find_package(OpenGL REQUIRED)
-
 if((APPLE AND NOT CMAKE_SYSTEM_NAME MATCHES "Darwin") OR EMSCRIPTEN)
     set(BUILD_SHARED_LIBS OFF CACHE INTERNAL "") # Disable shared builds on platforms where it does not make sense to use them
     set(SDL_SHARED OFF)
@@ -106,12 +104,16 @@ target_include_directories(${EXECUTABLE_NAME}
 
 # Link SDL to our executable. This also makes its include directory available to us. 
 target_link_libraries(${EXECUTABLE_NAME} PUBLIC
-    OpenGL::GL
     SDL3_ttf::SDL3_ttf # remove if you are not using SDL_ttf
     SDL3_mixer::SDL3_mixer # remove if you are not using SDL_mixer
     SDL3_image::SDL3_image # remove if you are not using SDL_image
     SDL3::SDL3 # If using satelite libraries, SDL must be the last item in the list. 
 )
+
+# Set specific opengl version for emscripten
+if(EMSCRIPTEN)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -s USE_WEBGL2=1")
+endif()
 
 # SDL_Image bug: https://github.com/libsdl-org/SDL_image/issues/506
 if(APPLE AND NOT BUILD_SHARED_LIBS)

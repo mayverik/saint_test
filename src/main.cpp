@@ -44,13 +44,29 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
         return SDL_Fail();
     }
 
-    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3))
+    // opengl is different version for emscripten
+    if (SDL_strcmp(SDL_GetPlatform(), "Emscripten") == 0)
     {
-        return SDL_Fail();
+        if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3))
+        {
+            return SDL_Fail();
+        }
+        if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 0))
+        {
+            return SDL_Fail();
+        }
     }
-    if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3))
+
+    else
     {
-        return SDL_Fail();
+        if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3))
+        {
+            return SDL_Fail();
+        }
+        if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 3))
+        {
+            return SDL_Fail();
+        }
     }
     if (!SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE))
     {

@@ -15,8 +15,9 @@ constexpr uint32_t windowStartHeight = 400;
 struct AppContext
 {
     SDL_Window *window;
-    SDL_Renderer *renderer;
-    SDL_Texture *messageTex, *imageTex;
+    // SDL_Renderer *renderer;
+    SDL_GLContext context;
+    // SDL_Texture *messageTex, *imageTex;
     SDL_FRect messageDest;
     SDL_AudioDeviceID audioDevice;
     Mix_Music *music;
@@ -66,15 +67,22 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     // create a window
 
-    SDL_Window *window = SDL_CreateWindow("SDL Minimal Sample", windowStartWidth, windowStartHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
+    SDL_Window *window = SDL_CreateWindow("SDL Minimal Sample", windowStartWidth, windowStartHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL);
+    // SDL_Window *window = SDL_CreateWindow("SDL Minimal Sample", windowStartWidth, windowStartHeight, SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY);
     if (not window)
     {
         return SDL_Fail();
     }
 
-    // create a renderer
-    SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
-    if (not renderer)
+    // // create a renderer
+    // SDL_Renderer *renderer = SDL_CreateRenderer(window, NULL);
+    // if (not renderer)
+    // {
+    //     return SDL_Fail();
+    // }
+
+    SDL_GLContext context = SDL_GL_CreateContext(window);
+    if (!context)
     {
         return SDL_Fail();
     }
@@ -108,7 +116,7 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     SDL_Surface *surfaceMessage = TTF_RenderText_Solid(font, text.data(), text.length(), {255, 255, 255});
 
     // make a texture from the surface
-    SDL_Texture *messageTex = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
+    // SDL_Texture *messageTex = SDL_CreateTextureFromSurface(renderer, surfaceMessage);
 
     // we no longer need the font or the surface, so we can destroy those now.
     TTF_CloseFont(font);
@@ -116,16 +124,16 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
 
     // load the SVG
     auto svg_surface = IMG_Load((basePath / "gs_tiger.svg").string().c_str());
-    SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, svg_surface);
+    // SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, svg_surface);
     SDL_DestroySurface(svg_surface);
 
     // get the on-screen dimensions of the text. this is necessary for rendering it
-    auto messageTexProps = SDL_GetTextureProperties(messageTex);
-    SDL_FRect text_rect{
-        .x = 0,
-        .y = 0,
-        .w = float(SDL_GetNumberProperty(messageTexProps, SDL_PROP_TEXTURE_WIDTH_NUMBER, 0)),
-        .h = float(SDL_GetNumberProperty(messageTexProps, SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0))};
+    // auto messageTexProps = SDL_GetTextureProperties(messageTex);
+    // SDL_FRect text_rect{
+    //     .x = 0,
+    //     .y = 0,
+    //     .w = float(SDL_GetNumberProperty(messageTexProps, SDL_PROP_TEXTURE_WIDTH_NUMBER, 0)),
+    //     .h = float(SDL_GetNumberProperty(messageTexProps, SDL_PROP_TEXTURE_HEIGHT_NUMBER, 0))};
 
     // init SDL Mixer
     auto audioDevice = SDL_OpenAudioDevice(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, NULL);
@@ -166,15 +174,16 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     // set up the application data
     *appstate = new AppContext{
         .window = window,
-        .renderer = renderer,
-        .messageTex = messageTex,
-        .imageTex = tex,
-        .messageDest = text_rect,
+        // .renderer = renderer,
+        .context = context,
+        // .messageTex = messageTex,
+        // .imageTex = tex,
+        // .messageDest = text_rect,
         .audioDevice = audioDevice,
         .music = music,
     };
 
-    SDL_SetRenderVSync(renderer, -1); // enable vysnc
+    // SDL_SetRenderVSync(renderer, -1); // enable vysnc
 
     SDL_Log("Application started successfully!");
 
@@ -203,14 +212,19 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     auto green = (std::sin(time / 2) + 1) / 2.0 * 255;
     auto blue = (std::sin(time) * 2 + 1) / 2.0 * 255;
 
-    SDL_SetRenderDrawColor(app->renderer, red, green, blue, SDL_ALPHA_OPAQUE);
-    SDL_RenderClear(app->renderer);
+    glClearColor(red / 255.0f, blue / 255.0f, green / 255.0f, SDL_ALPHA_OPAQUE_FLOAT);
+    glClear(GL_COLOR_BUFFER_BIT);
 
-    // Renderer uses the painter's algorithm to make the text appear above the image, we must render the image first.
-    SDL_RenderTexture(app->renderer, app->imageTex, NULL, NULL);
-    SDL_RenderTexture(app->renderer, app->messageTex, NULL, &app->messageDest);
+    // SDL_SetRenderDrawColor(app->renderer, red, green, blue, SDL_ALPHA_OPAQUE);
+    // SDL_RenderClear(app->renderer);
 
-    SDL_RenderPresent(app->renderer);
+    // // Renderer uses the painter's algorithm to make the text appear above the image, we must render the image first.
+    // SDL_RenderTexture(app->renderer, app->imageTex, NULL, NULL);
+    // SDL_RenderTexture(app->renderer, app->messageTex, NULL, &app->messageDest);
+
+    // SDL_RenderPresent(app->renderer);
+
+    SDL_GL_SwapWindow(app->window);
 
     return app->app_quit;
 }
@@ -220,8 +234,8 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
     auto *app = (AppContext *)appstate;
     if (app)
     {
-        SDL_DestroyRenderer(app->renderer);
-        SDL_DestroyWindow(app->window);
+        // SDL_DestroyRenderer(app->renderer);
+        // SDL_DestroyWindow(app->window);
 
         Mix_FadeOutMusic(1000);    // prevent the music from abruptly ending.
         Mix_FreeMusic(app->music); // this call blocks until the music has finished fading

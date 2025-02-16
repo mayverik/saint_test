@@ -30,6 +30,8 @@ jobs:
                     build/Release/*.ttf
                     build/Release/*.ogg
                     build/Release/*.svg
+                    build/Release/*.vs
+                    build/Release/*.fs
                     
     build-linux:
         name: Build for Linux
@@ -55,6 +57,8 @@ jobs:
                     build/Release/*.ttf
                     build/Release/*.ogg
                     build/Release/*.svg
+                    build/Release/*.vs
+                    build/Release/*.fs
 
     build-mac:
         name: Build for Apple

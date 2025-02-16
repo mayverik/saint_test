@@ -143,6 +143,10 @@ if(APPLE)
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/Inter-VariableFont.ttf")
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/the_entertainer.ogg")
     add_resource("${CMAKE_CURRENT_LIST_DIR}/src/gs_tiger.svg")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/vertex_default.vs")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/vertex_web.vs")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/fragment_default.fs")
+    add_resource("${CMAKE_CURRENT_LIST_DIR}/src/fragment_web.fs")
 elseif(EMSCRIPTEN)
     # on the web, we have to put the files inside of the webassembly
     # somewhat unintuitively, this is done via a linker argument.
@@ -150,6 +154,10 @@ elseif(EMSCRIPTEN)
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/Inter-VariableFont.ttf@/\""
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/the_entertainer.ogg@/\""
         "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/gs_tiger.svg@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/vertex_default.vs@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/vertex_web.vs@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/fragment_default.fs@/\""
+        "--preload-file \"${CMAKE_CURRENT_LIST_DIR}/src/fragment_web.fs@/\""
     )
 else()
     if(ANDROID)
@@ -175,6 +183,10 @@ else()
     copy_helper("Inter-VariableFont.ttf")
     copy_helper("the_entertainer.ogg")
     copy_helper("gs_tiger.svg")
+    copy_helper("vertex_default.vs")
+    copy_helper("vertex_web.vs")
+    copy_helper("fragment_default.fs")
+    copy_helper("fragment_web.fs")
 endif()
 
 # set some extra configs for each platform

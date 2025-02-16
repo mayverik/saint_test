@@ -102,17 +102,24 @@ target_include_directories(${EXECUTABLE_NAME}
     PRIVATE $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/src>
 )
 
-# Link SDL to our executable. This also makes its include directory available to us. 
-target_link_libraries(${EXECUTABLE_NAME} PUBLIC
-    SDL3_ttf::SDL3_ttf # remove if you are not using SDL_ttf
-    SDL3_mixer::SDL3_mixer # remove if you are not using SDL_mixer
-    SDL3_image::SDL3_image # remove if you are not using SDL_image
-    SDL3::SDL3 # If using satelite libraries, SDL must be the last item in the list. 
-)
 
 # Set specific opengl version for emscripten
 if(EMSCRIPTEN)
-    target_link_libraries(${EXECUTABLE_NAME} "-s USE_WEBGL2=1")
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+        "-s USE_WEBGL2=1"
+        SDL3_ttf::SDL3_ttf # remove if you are not using SDL_ttf
+        SDL3_mixer::SDL3_mixer # remove if you are not using SDL_mixer
+        SDL3_image::SDL3_image # remove if you are not using SDL_image
+        SDL3::SDL3 # If using satelite libraries, SDL must be the last item in the list. 
+    )
+else()
+    # Link SDL to our executable. This also makes its include directory available to us. 
+    target_link_libraries(${EXECUTABLE_NAME} PRIVATE
+        SDL3_ttf::SDL3_ttf # remove if you are not using SDL_ttf
+        SDL3_mixer::SDL3_mixer # remove if you are not using SDL_mixer
+        SDL3_image::SDL3_image # remove if you are not using SDL_image
+        SDL3::SDL3 # If using satelite libraries, SDL must be the last item in the list. 
+    )
 endif()
 
 # SDL_Image bug: https://github.com/libsdl-org/SDL_image/issues/506

@@ -5,12 +5,25 @@
 #include <SDL3_mixer/SDL_mixer.h>
 #include <SDL3_image/SDL_image.h>
 #include <cmath>
+#include <fstream>
+#include <iostream>
 #include <string_view>
 #include <filesystem>
 #include <glad/glad.h>
 
 constexpr uint32_t windowStartWidth = 400;
 constexpr uint32_t windowStartHeight = 400;
+
+const float vertices[] = {0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
+                          0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
+                          -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+                          -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+const unsigned int indices[] = {0, 1, 2,
+                                2, 3, 0};
+int shaderSuccess;
+char infoLog[1024];
+
+GLuint shaderProgram, vao, vbo, ebo;
 
 struct AppContext
 {
@@ -120,6 +133,105 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     const std::filesystem::path basePath = basePathPtr;
 #endif
 
+    std::string vertexCodeFileName = "vertex_default.vs";
+    std::string fragmentCodeFileName = "fragment_default.fs";
+    if (SDL_strcmp(SDL_GetPlatform(), "Emscripten") == 0)
+    {
+        vertexCodeFileName = "vertex_web.vs";
+        fragmentCodeFileName = "fragment_web.fs";
+    }
+
+    const char *vertexCode;
+    std::string vertexCodeString;
+    std::stringstream vertexCodeStream;
+    std::ifstream vertexCodeFile(basePath / vertexCodeFileName);
+    if (!vertexCodeFile.is_open())
+    {
+        std::cerr << "Cannot open vertex shader file!" << std::endl;
+        return SDL_APP_FAILURE;
+    }
+
+    vertexCodeStream << vertexCodeFile.rdbuf();
+    vertexCodeFile.close();
+    vertexCodeString = vertexCodeStream.str();
+    vertexCode = vertexCodeString.c_str();
+
+    GLuint vertexShader = glCreateShader(GL_VERTEX_SHADER);
+    glShaderSource(vertexShader, 1, &vertexCode, NULL);
+    glCompileShader(vertexShader);
+
+    glGetShaderiv(vertexShader, GL_COMPILE_STATUS, &shaderSuccess);
+    if (!shaderSuccess)
+    {
+        glGetShaderInfoLog(vertexShader, 1024, NULL, infoLog);
+        std::cerr << "Error compiling vertex shader!\n"
+                  << infoLog << std::endl;
+        return SDL_APP_FAILURE;
+    }
+
+    const char *fragmentCode;
+    std::string fragmentCodeString;
+    std::stringstream fragmentCodeStream;
+    std::ifstream fragmentCodeFile(basePath / fragmentCodeFileName);
+
+    if (!fragmentCodeFile.is_open())
+    {
+        std::cerr << "Cannot open fragment code file!" << std::endl;
+        return SDL_APP_FAILURE;
+    }
+
+    fragmentCodeStream << fragmentCodeFile.rdbuf();
+    fragmentCodeFile.close();
+    fragmentCodeString = fragmentCodeStream.str();
+    fragmentCode = fragmentCodeString.c_str();
+
+    GLuint fragmentShader = glCreateShader(GL_FRAGMENT_SHADER);
+    glShaderSource(fragmentShader, 1, &fragmentCode, NULL);
+    glCompileShader(fragmentShader);
+
+    glGetShaderiv(fragmentShader, GL_COMPILE_STATUS, &shaderSuccess);
+    if (!shaderSuccess)
+    {
+        glGetShaderInfoLog(fragmentShader, 1024, NULL, infoLog);
+        std::cerr << "Error compiling fragment shader!\n"
+                  << infoLog << std::endl;
+        return SDL_APP_FAILURE;
+    }
+
+    shaderProgram = glCreateProgram();
+    glAttachShader(shaderProgram, vertexShader);
+    glAttachShader(shaderProgram, fragmentShader);
+    glLinkProgram(shaderProgram);
+
+    glGetProgramiv(shaderProgram, GL_LINK_STATUS, &shaderSuccess);
+    if (!shaderSuccess)
+    {
+        glGetProgramInfoLog(shaderProgram, 1024, NULL, infoLog);
+        std::cerr << "Error linking shader program!\n"
+                  << infoLog << std::endl;
+        return SDL_APP_FAILURE;
+    }
+
+    glDeleteShader(vertexShader);
+    glDeleteShader(fragmentShader);
+
+    glGenVertexArrays(1, &vao);
+    glBindVertexArray(vao);
+
+    glGenBuffers(1, &vbo);
+    glBindBuffer(GL_ARRAY_BUFFER, vbo);
+    glBufferData(GL_ARRAY_BUFFER, sizeof(vertices), vertices, GL_STATIC_DRAW);
+
+    glGenBuffers(1, &ebo);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
+
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)(3 * sizeof(float)));
+    glEnableVertexAttribArray(1);
+
     const auto fontPath = basePath / "Inter-VariableFont.ttf";
     TTF_Font *font = TTF_OpenFont(fontPath.string().c_str(), 36);
     if (not font)
@@ -222,14 +334,23 @@ SDL_AppResult SDL_AppIterate(void *appstate)
 {
     auto *app = (AppContext *)appstate;
 
+    int windowWidth, windowHeight;
+    SDL_GetWindowSize(app->window, &windowWidth, &windowHeight);
+
     // draw a color
     auto time = SDL_GetTicks() / 1000.f;
     auto red = (std::sin(time) + 1) / 2.0 * 255;
     auto green = (std::sin(time / 2) + 1) / 2.0 * 255;
     auto blue = (std::sin(time) * 2 + 1) / 2.0 * 255;
 
+    glViewport(0, 0, windowWidth, windowHeight);
     glClearColor(red / 255.0f, blue / 255.0f, green / 255.0f, SDL_ALPHA_OPAQUE_FLOAT);
     glClear(GL_COLOR_BUFFER_BIT);
+
+    glUseProgram(shaderProgram);
+    glBindVertexArray(vao);
+    glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
+    // glDrawArrays(GL_TRIANGLES, 0, 3);
 
     // SDL_SetRenderDrawColor(app->renderer, red, green, blue, SDL_ALPHA_OPAQUE);
     // SDL_RenderClear(app->renderer);
@@ -252,6 +373,15 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
     {
         // SDL_DestroyRenderer(app->renderer);
         // SDL_DestroyWindow(app->window);
+
+        glDeleteBuffers(1, &ebo);
+        glDeleteBuffers(1, &vbo);
+        glDeleteVertexArrays(1, &vao);
+
+        glDeleteProgram(shaderProgram);
+
+        SDL_GL_DestroyContext(app->context);
+        SDL_DestroyWindow(app->window);
 
         Mix_FadeOutMusic(1000);    // prevent the music from abruptly ending.
         Mix_FreeMusic(app->music); // this call blocks until the music has finished fading

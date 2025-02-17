@@ -7,6 +7,7 @@
 #include <cmath>
 #include <fstream>
 #include <iostream>
+#include <sstream>
 #include <string_view>
 #include <filesystem>
 #include <glad/glad.h>
@@ -14,16 +15,16 @@
 constexpr uint32_t windowStartWidth = 400;
 constexpr uint32_t windowStartHeight = 400;
 
-const float vertices[] = {0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-                          0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f,
-                          -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f,
-                          -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f};
+const float vertices[] = {0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f,
+                          0.5f, -0.5f, 0.0f, 1.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f,
+                          -0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
+                          -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f};
 const unsigned int indices[] = {0, 1, 2,
                                 2, 3, 0};
 int shaderSuccess;
 char infoLog[1024];
 
-GLuint shaderProgram, vao, vbo, ebo;
+GLuint shaderProgram, vao, vbo, ebo, imgTex;
 
 struct AppContext
 {
@@ -226,11 +227,14 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, ebo);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, sizeof(indices), indices, GL_STATIC_DRAW);
 
-    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)0);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)0);
     glEnableVertexAttribArray(0);
 
-    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 7 * sizeof(float), (void *)(3 * sizeof(float)));
+    glVertexAttribPointer(1, 4, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
+
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 9 * sizeof(float), (void *)(4 * sizeof(float)));
+    glEnableVertexAttribArray(2);
 
     const auto fontPath = basePath / "Inter-VariableFont.ttf";
     TTF_Font *font = TTF_OpenFont(fontPath.string().c_str(), 36);
@@ -250,10 +254,22 @@ SDL_AppResult SDL_AppInit(void **appstate, int argc, char *argv[])
     TTF_CloseFont(font);
     SDL_DestroySurface(surfaceMessage);
 
+    glGenTextures(1, &imgTex);
+    glBindTexture(GL_TEXTURE_2D, imgTex);
+
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
     // load the SVG
-    auto svg_surface = IMG_Load((basePath / "gs_tiger.svg").string().c_str());
+    auto svg_surface = IMG_Load((basePath / "logo.png").string().c_str());
     // SDL_Texture *tex = SDL_CreateTextureFromSurface(renderer, svg_surface);
+    auto svg_surface_rgba = SDL_ConvertSurface(svg_surface, SDL_PIXELFORMAT_RGBA32);
     SDL_DestroySurface(svg_surface);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, svg_surface->w, svg_surface->h, 0, GL_RGBA, GL_UNSIGNED_BYTE, svg_surface->pixels);
+    glGenerateMipmap(GL_TEXTURE_2D);
+    SDL_DestroySurface(svg_surface_rgba);
 
     // get the on-screen dimensions of the text. this is necessary for rendering it
     // auto messageTexProps = SDL_GetTextureProperties(messageTex);
@@ -348,6 +364,7 @@ SDL_AppResult SDL_AppIterate(void *appstate)
     glClear(GL_COLOR_BUFFER_BIT);
 
     glUseProgram(shaderProgram);
+    glBindTexture(GL_TEXTURE_2D, imgTex);
     glBindVertexArray(vao);
     glDrawElements(GL_TRIANGLES, 6, GL_UNSIGNED_INT, NULL);
     // glDrawArrays(GL_TRIANGLES, 0, 3);
@@ -374,6 +391,7 @@ void SDL_AppQuit(void *appstate, SDL_AppResult result)
         // SDL_DestroyRenderer(app->renderer);
         // SDL_DestroyWindow(app->window);
 
+        glDeleteTextures(1, &imgTex);
         glDeleteBuffers(1, &ebo);
         glDeleteBuffers(1, &vbo);
         glDeleteVertexArrays(1, &vao);
